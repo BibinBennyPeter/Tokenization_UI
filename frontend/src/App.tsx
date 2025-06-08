@@ -3,7 +3,7 @@ import OnboardingLayout from './components/OnboardingLayout';
 import AuthCard from './components/AuthCard';
 import { CheckCircle } from 'lucide-react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-
+import AdminDashboard from './pages/AdminDashboard';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -33,12 +33,12 @@ function App() {
   }
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}> 
-    <OnboardingLayout>
-      <AuthCard onSuccess={handleAuthSuccess} />
-    </OnboardingLayout>
-    </GoogleOAuthProvider>
-
+    // <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}> 
+    // <OnboardingLayout>
+    //   <AuthCard onSuccess={handleAuthSuccess} />
+    // </OnboardingLayout>
+    // </GoogleOAuthProvider>
+     <AdminDashboard/>
   );
 }
 
