@@ -1,489 +1,423 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, ChevronDown, ChevronUp, Shield, AlertTriangle } from 'lucide-react';
-
+import { Search, Filter, Calendar, Download, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import PageLayout from './PageLayout';
+// Mock data type
 interface ComplianceLog {
   id: string;
   timestamp: string;
-  adminName: string;
-  adminEmail: string;
-  actionType: ActionType;
-  target: string;
-  description: string;
-  isSensitive: boolean;
+  actionType: string;
+  performedBy: string;
+  summary: string;
+  fullDetails: string;
+  userEmail?: string;
+  propertyId?: string;
+  statusChange?: { from: string; to: string };
 }
 
-type ActionType = 
-  | 'KYC_APPROVED' 
-  | 'KYC_REJECTED' 
-  | 'DIVIDEND_TRIGGERED' 
-  | 'PROPERTY_APPROVED' 
-  | 'PROPERTY_REJECTED'
-  | 'ROLE_CHANGED' 
-  | 'USER_DELETED' 
-  | 'TOKEN_MINTED' 
-  | 'TRANSACTION_VERIFIED'
-  | 'DOCUMENT_UPLOADED'
-  | 'PAYOUT_PROCESSED'
-  | 'SYSTEM_CONFIG_CHANGED';
+// Mock data
+const mockLogs: ComplianceLog[] = [
+  {
+    id: '1',
+    timestamp: '2024-06-09T10:30:00Z',
+    actionType: 'KYC_APPROVED',
+    performedBy: 'admin@realestate.com',
+    summary: 'KYC verification approved for user john.doe@email.com',
+    fullDetails: 'Comprehensive KYC verification completed. All documents verified including ID, proof of address, and income verification.',
+    userEmail: 'john.doe@email.com',
+    statusChange: { from: 'PENDING', to: 'APPROVED' }
+  },
+  {
+    id: '2',
+    timestamp: '2024-06-09T09:15:00Z',
+    actionType: 'DIVIDEND_TRIGGERED',
+    performedBy: 'system@realestate.com',
+    summary: 'Quarterly dividend payout initiated for Property #PROP-001',
+    fullDetails: 'Automated quarterly dividend distribution of $50,000 across 100 token holders for Sunset Plaza property.',
+    propertyId: 'PROP-001',
+    userEmail: 'multiple_recipients'
+  },
+  {
+    id: '3',
+    timestamp: '2024-06-09T08:45:00Z',
+    actionType: 'ROLE_CHANGED',
+    performedBy: 'superadmin@realestate.com',
+    summary: 'User role updated from Investor to Premium Investor',
+    fullDetails: 'Role escalation performed due to investment threshold reached. User now has access to premium investment opportunities.',
+    userEmail: 'investor@email.com',
+    statusChange: { from: 'INVESTOR', to: 'PREMIUM_INVESTOR' }
+  },
+  {
+    id: '4',
+    timestamp: '2024-06-08T16:20:00Z',
+    actionType: 'TOKEN_MINTED',
+    performedBy: 'admin@realestate.com',
+    summary: 'New property tokens minted for Marina Heights',
+    fullDetails: 'Minted 1000 tokens representing ownership shares in Marina Heights property. Total property value: $2,500,000.',
+    propertyId: 'PROP-002'
+  },
+  {
+    id: '5',
+    timestamp: '2024-06-08T14:10:00Z',
+    actionType: 'KYC_REJECTED',
+    performedBy: 'compliance@realestate.com',
+    summary: 'KYC verification rejected due to incomplete documentation',
+    fullDetails: 'KYC application rejected. Missing valid government ID and proof of address. User notified to resubmit complete documentation.',
+    userEmail: 'incomplete@email.com',
+    statusChange: { from: 'PENDING', to: 'REJECTED' }
+  },
+  {
+    id: '6',
+    timestamp: '2024-06-08T11:30:00Z',
+    actionType: 'PROPERTY_DELETED',
+    performedBy: 'superadmin@realestate.com',
+    summary: 'Property listing removed from platform',
+    fullDetails: 'Property PROP-003 permanently removed due to legal compliance issues. All associated tokens have been refunded.',
+    propertyId: 'PROP-003'
+  }
+];
 
-interface PageLayoutProps {
-  title: string;
-  children: React.ReactNode;
-}
 
-const PageLayout: React.FC<PageLayoutProps> = ({ title, children }) => (
-  <div className="min-h-screen bg-gray-50 p-6">
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
-        <p className="text-gray-600">Monitor and audit all system activities for compliance and security purposes.</p>
-      </div>
-      {children}
-    </div>
-  </div>
-);
 
 const ComplianceLogs: React.FC = () => {
+  const [selectedLog, setSelectedLog] = useState<ComplianceLog | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedAdmin, setSelectedAdmin] = useState('');
-  const [selectedActionType, setSelectedActionType] = useState('');
+  const [actionTypeFilter, setActionTypeFilter] = useState('');
+  const [adminFilter, setAdminFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [showSensitiveOnly, setShowSensitiveOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const logsPerPage = 10;
 
-  // Mock data
-  const mockLogs: ComplianceLog[] = [
-    {
-      id: '1',
-      timestamp: '2025-06-08T09:15:30Z',
-      adminName: 'Sarah Johnson',
-      adminEmail: 'sarah.johnson@admin.com',
-      actionType: 'KYC_APPROVED',
-      target: 'Ahmed Al-Rashid',
-      description: 'Approved KYC verification for Ahmed Al-Rashid after document review',
-      isSensitive: false
-    },
-    {
-      id: '2',
-      timestamp: '2025-06-08T08:45:12Z',
-      adminName: 'Michael Chen',
-      adminEmail: 'michael.chen@admin.com',
-      actionType: 'DIVIDEND_TRIGGERED',
-      target: 'Burj Vista Tower',
-      description: 'Triggered dividend payout of 120,000 AED for Burj Vista Tower investors',
-      isSensitive: true
-    },
-    {
-      id: '3',
-      timestamp: '2025-06-07T16:30:45Z',
-      adminName: 'Emma Wilson',
-      adminEmail: 'emma.wilson@admin.com',
-      actionType: 'PROPERTY_APPROVED',
-      target: 'Marina Bay Complex',
-      description: 'Approved property listing for Marina Bay Complex after due diligence',
-      isSensitive: false
-    },
-    {
-      id: '4',
-      timestamp: '2025-06-07T14:22:18Z',
-      adminName: 'David Rodriguez',
-      adminEmail: 'david.rodriguez@admin.com',
-      actionType: 'ROLE_CHANGED',
-      target: 'Lisa Chen',
-      description: 'Changed user role from Investor to Premium Investor for Lisa Chen',
-      isSensitive: true
-    },
-    {
-      id: '5',
-      timestamp: '2025-06-07T11:15:33Z',
-      adminName: 'Sarah Johnson',
-      adminEmail: 'sarah.johnson@admin.com',
-      actionType: 'KYC_REJECTED',
-      target: 'John Smith',
-      description: 'Rejected KYC application for John Smith due to incomplete documentation',
-      isSensitive: false
-    },
-    {
-      id: '6',
-      timestamp: '2025-06-06T15:45:21Z',
-      adminName: 'Michael Chen',
-      adminEmail: 'michael.chen@admin.com',
-      actionType: 'USER_DELETED',
-      target: 'test@example.com',
-      description: 'Deleted inactive test user account after 90 days of inactivity',
-      isSensitive: true
-    },
-    {
-      id: '7',
-      timestamp: '2025-06-06T13:20:55Z',
-      adminName: 'Emma Wilson',
-      adminEmail: 'emma.wilson@admin.com',
-      actionType: 'TOKEN_MINTED',
-      target: 'Downtown Plaza',
-      description: 'Minted 8,000 new tokens for Downtown Plaza property tokenization',
-      isSensitive: false
-    },
-    {
-      id: '8',
-      timestamp: '2025-06-06T10:30:12Z',
-      adminName: 'David Rodriguez',
-      adminEmail: 'david.rodriguez@admin.com',
-      actionType: 'TRANSACTION_VERIFIED',
-      target: 'TXN-4567890',
-      description: 'Verified blockchain transaction TXN-4567890 for token transfer',
-      isSensitive: false
-    },
-    {
-      id: '9',
-      timestamp: '2025-06-05T17:15:44Z',
-      adminName: 'Sarah Johnson',
-      adminEmail: 'sarah.johnson@admin.com',
-      actionType: 'DOCUMENT_UPLOADED',
-      target: 'Palm Heights Property',
-      description: 'Uploaded legal documentation for Palm Heights Property due diligence',
-      isSensitive: false
-    },
-    {
-      id: '10',
-      timestamp: '2025-06-05T14:45:28Z',
-      adminName: 'Michael Chen',
-      adminEmail: 'michael.chen@admin.com',
-      actionType: 'PAYOUT_PROCESSED',
-      target: 'Marina Bay Investors',
-      description: 'Processed quarterly dividend payout to 25 Marina Bay Complex investors',
-      isSensitive: true
-    },
-    {
-      id: '11',
-      timestamp: '2025-06-05T09:20:17Z',
-      adminName: 'Emma Wilson',
-      adminEmail: 'emma.wilson@admin.com',
-      actionType: 'SYSTEM_CONFIG_CHANGED',
-      target: 'KYC Settings',
-      description: 'Updated KYC verification requirements to include additional identity checks',
-      isSensitive: true
-    },
-    {
-      id: '12',
-      timestamp: '2025-06-04T16:55:33Z',
-      adminName: 'David Rodriguez',
-      adminEmail: 'david.rodriguez@admin.com',
-      actionType: 'PROPERTY_REJECTED',
-      target: 'Sunset Apartments',
-      description: 'Rejected property application for Sunset Apartments due to regulatory compliance issues',
-      isSensitive: false
-    }
-  ];
+  // Get unique action types and admins for filters
+  const actionTypes = [...new Set(mockLogs.map(log => log.actionType))];
+  const admins = [...new Set(mockLogs.map(log => log.performedBy))];
 
-  const uniqueAdmins = Array.from(new Set(mockLogs.map(log => log.adminEmail))).sort();
-  const actionTypes: ActionType[] = [
-    'KYC_APPROVED', 'KYC_REJECTED', 'DIVIDEND_TRIGGERED', 'PROPERTY_APPROVED', 
-    'PROPERTY_REJECTED', 'ROLE_CHANGED', 'USER_DELETED', 'TOKEN_MINTED', 
-    'TRANSACTION_VERIFIED', 'DOCUMENT_UPLOADED', 'PAYOUT_PROCESSED', 'SYSTEM_CONFIG_CHANGED'
-  ];
+  // Filter logs
+  const filteredLogs = useMemo(() => {
+    return mockLogs.filter(log => {
+      const matchesSearch = searchTerm === '' || 
+        log.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.propertyId?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesActionType = actionTypeFilter === '' || log.actionType === actionTypeFilter;
+      const matchesAdmin = adminFilter === '' || log.performedBy === adminFilter;
+      
+      const logDate = new Date(log.timestamp);
+      const matchesDateFrom = dateFrom === '' || logDate >= new Date(dateFrom);
+      const matchesDateTo = dateTo === '' || logDate <= new Date(dateTo);
+      
+      return matchesSearch && matchesActionType && matchesAdmin && matchesDateFrom && matchesDateTo;
+    });
+  }, [searchTerm, actionTypeFilter, adminFilter, dateFrom, dateTo]);
 
-  const getActionBadgeColor = (actionType: ActionType): string => {
-    const colors = {
-      KYC_APPROVED: 'bg-green-100 text-green-800',
-      KYC_REJECTED: 'bg-red-100 text-red-800',
-      DIVIDEND_TRIGGERED: 'bg-purple-100 text-purple-800',
-      PROPERTY_APPROVED: 'bg-blue-100 text-blue-800',
-      PROPERTY_REJECTED: 'bg-red-100 text-red-800',
-      ROLE_CHANGED: 'bg-yellow-100 text-yellow-800',
-      USER_DELETED: 'bg-red-100 text-red-800',
-      TOKEN_MINTED: 'bg-green-100 text-green-800',
-      TRANSACTION_VERIFIED: 'bg-blue-100 text-blue-800',
-      DOCUMENT_UPLOADED: 'bg-gray-100 text-gray-800',
-      PAYOUT_PROCESSED: 'bg-purple-100 text-purple-800',
-      SYSTEM_CONFIG_CHANGED: 'bg-orange-100 text-orange-800'
-    };
-    return colors[actionType] || 'bg-gray-100 text-gray-800';
-  };
+  // Pagination
+  const totalPages = Math.ceil(filteredLogs.length / logsPerPage);
+  const startIndex = (currentPage - 1) * logsPerPage;
+  const paginatedLogs = filteredLogs.slice(startIndex, startIndex + logsPerPage);
 
-  const getAdminInitials = (name: string): string => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
-  const formatTimestamp = (timestamp: string): string => {
+  // Format timestamp
+  const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: '2-digit',
+      day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+      minute: '2-digit'
     });
   };
 
-  const filteredLogs = useMemo(() => {
-    let filtered = mockLogs;
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(log =>
-        log.adminName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.adminEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.actionType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.target.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  // Get action type styling
+  const getActionTypeStyle = (actionType: string) => {
+    const sensitiveActions = ['PROPERTY_DELETED', 'KYC_REJECTED', 'DIVIDEND_TRIGGERED'];
+    if (sensitiveActions.includes(actionType)) {
+      return 'bg-red-100 text-red-800 border border-red-200';
     }
-
-    // Filter by admin
-    if (selectedAdmin) {
-      filtered = filtered.filter(log => log.adminEmail === selectedAdmin);
+    if (actionType.includes('APPROVED')) {
+      return 'bg-green-100 text-green-800 border border-green-200';
     }
+    return 'bg-blue-100 text-blue-800 border border-blue-200';
+  };
 
-    // Filter by action type
-    if (selectedActionType) {
-      filtered = filtered.filter(log => log.actionType === selectedActionType);
-    }
-
-    // Filter by date range
-    if (dateFrom) {
-      filtered = filtered.filter(log => new Date(log.timestamp) >= new Date(dateFrom));
-    }
-    if (dateTo) {
-      filtered = filtered.filter(log => new Date(log.timestamp) <= new Date(dateTo + 'T23:59:59'));
-    }
-
-    // Filter sensitive actions only
-    if (showSensitiveOnly) {
-      filtered = filtered.filter(log => log.isSensitive);
-    }
-
-    // Sort by timestamp
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.timestamp).getTime();
-      const dateB = new Date(b.timestamp).getTime();
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-    });
-
-    return filtered;
-  }, [mockLogs, searchTerm, selectedAdmin, selectedActionType, dateFrom, dateTo, showSensitiveOnly, sortOrder]);
-
+  // Export to CSV
   const exportToCSV = () => {
     const csvContent = [
-      ['Timestamp', 'Admin Name', 'Admin Email', 'Action Type', 'Target', 'Description', 'Sensitive'],
+      ['Timestamp', 'Action Type', 'Performed By', 'Summary', 'User Email', 'Property ID'],
       ...filteredLogs.map(log => [
         formatTimestamp(log.timestamp),
-        log.adminName,
-        log.adminEmail,
         log.actionType,
-        log.target,
-        log.description,
-        log.isSensitive ? 'Yes' : 'No'
+        log.performedBy,
+        log.summary,
+        log.userEmail || '',
+        log.propertyId || ''
       ])
-    ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    ].map(row => row.map(field => `"${field}"`).join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `compliance-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `compliance_logs_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedAdmin('');
-    setSelectedActionType('');
-    setDateFrom('');
-    setDateTo('');
-    setShowSensitiveOnly(false);
-  };
-
   return (
     <PageLayout title="Compliance Logs">
-      <div className="bg-white rounded-lg shadow-sm border">
-        {/* Filters Section */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col lg:flex-row gap-4 mb-4">
-            {/* Search Bar */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search logs by admin, action, target, or description..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
+      {/* Filters and Search */}
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search logs..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-            {/* Export Button */}
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          {/* Action Type Filter */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <select
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={actionTypeFilter}
+              onChange={(e) => setActionTypeFilter(e.target.value)}
             >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-          </div>
-
-          {/* Filter Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {/* Admin Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Admin User</label>
-              <select
-                value={selectedAdmin}
-                onChange={(e) => setSelectedAdmin(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">All Admins</option>
-                {uniqueAdmins.map(email => (
-                  <option key={email} value={email}>{email}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Action Type Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Action Type</label>
-              <select
-                value={selectedActionType}
-                onChange={(e) => setSelectedActionType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">All Actions</option>
-                {actionTypes.map(type => (
-                  <option key={type} value={type}>{type.replace('_', ' ')}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Date From */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            {/* Date To */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Additional Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showSensitiveOnly}
-                onChange={(e) => setShowSensitiveOnly(e.target.checked)}
-                className="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-              />
-              <span className="text-sm text-gray-700 flex items-center gap-1">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                Show sensitive actions only
-              </span>
-            </label>
-
-            <button
-              onClick={clearFilters}
-              className="text-sm text-blue-600 hover:text-blue-800 underline"
-            >
-              Clear all filters
-            </button>
-
-            <div className="text-sm text-gray-500">
-              Showing {filteredLogs.length} of {mockLogs.length} entries
-            </div>
-          </div>
-        </div>
-
-        {/* Table Section */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <button
-                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                    className="flex items-center gap-1 hover:text-gray-700"
-                  >
-                    Timestamp
-                    {sortOrder === 'desc' ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                  </button>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Admin
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Target
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex items-center gap-2">
-                      {log.isSensitive && <Shield className="w-4 h-4 text-red-500" />}
-                      {formatTimestamp(log.timestamp)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                        {getAdminInitials(log.adminName)}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{log.adminName}</div>
-                        <div className="text-sm text-gray-500">{log.adminEmail}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getActionBadgeColor(log.actionType)}`}>
-                      {log.actionType.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {log.target}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-md">
-                    <div className="truncate" title={log.description}>
-                      {log.description}
-                    </div>
-                  </td>
-                </tr>
+              <option value="">All Actions</option>
+              {actionTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
 
-          {filteredLogs.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-500 text-lg mb-2">No logs found</div>
-              <div className="text-gray-400 text-sm">Try adjusting your search criteria or filters</div>
-            </div>
-          )}
+          {/* Admin Filter */}
+          <select
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={adminFilter}
+            onChange={(e) => setAdminFilter(e.target.value)}
+          >
+            <option value="">All Admins</option>
+            {admins.map(admin => (
+              <option key={admin} value={admin}>{admin}</option>
+            ))}
+          </select>
+
+          {/* Date From */}
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="date"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+
+          {/* Date To */}
+          <input
+            type="date"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
         </div>
 
-        {/* Pagination could be added here for large datasets */}
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-600">
+            Showing {startIndex + 1}-{Math.min(startIndex + logsPerPage, filteredLogs.length)} of {filteredLogs.length} logs
+          </div>
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+        </div>
       </div>
+
+      {/* Logs Table */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto px-4  lg:px-0">
+             <div className=" min-w-[600px] lg:min-w-0 max-w-[calc(100vw-240px)] lg:max-w-[calc(100vw-18rem)]">
+                <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Timestamp
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Performed By
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Summary
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatTimestamp(log.timestamp)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getActionTypeStyle(log.actionType)}`}>
+                        {log.actionType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {log.performedBy}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
+                      {log.summary}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => setSelectedLog(log)}
+                        className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+            
+            <div className="flex gap-2">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Log Details</h3>
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Timestamp</label>
+                  <p className="text-sm text-gray-900">{formatTimestamp(selectedLog.timestamp)}</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Action Type</label>
+                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${getActionTypeStyle(selectedLog.actionType)}`}>
+                    {selectedLog.actionType}
+                  </span>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Performed By</label>
+                  <p className="text-sm text-gray-900">{selectedLog.performedBy}</p>
+                </div>
+                
+                {selectedLog.userEmail && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">User Email</label>
+                    <p className="text-sm text-gray-900">{selectedLog.userEmail}</p>
+                  </div>
+                )}
+                
+                {selectedLog.propertyId && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Property ID</label>
+                    <p className="text-sm text-gray-900">{selectedLog.propertyId}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Summary</label>
+                <p className="text-sm text-gray-900">{selectedLog.summary}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Details</label>
+                <p className="text-sm text-gray-900">{selectedLog.fullDetails}</p>
+              </div>
+              
+              {selectedLog.statusChange && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status Change</label>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">{selectedLog.statusChange.from}</span>
+                    <span className="text-gray-400">→</span>
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded">{selectedLog.statusChange.to}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="px-6 py-4 border-t border-gray-200">
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 };

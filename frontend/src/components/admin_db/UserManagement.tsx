@@ -21,7 +21,7 @@ interface User {
   email: string;
   userType: 'Investor' | 'Landowner' | 'Compliance Officer';
   kycStatus: 'Verified' | 'Pending' | 'Rejected' | 'Not Started';
-  role: 'Admin' | 'User' | 'Manager' | 'Viewer';
+  role: 'Investor' | 'Landowner' | 'Compliance Officer';
   lastLogin: string;
   registrationDate: string;
   totalInvestmentEarnings: number;
@@ -36,7 +36,7 @@ const mockUsers: User[] = [
     email: 'john.smith@example.com',
     userType: 'Investor',
     kycStatus: 'Verified',
-    role: 'User',
+    role: 'Investor',
     lastLogin: '2024-06-07T10:30:00Z',
     registrationDate: '2024-01-15T09:00:00Z',
     totalInvestmentEarnings: 125000,
@@ -48,7 +48,7 @@ const mockUsers: User[] = [
     email: 'sarah.johnson@example.com',
     userType: 'Landowner',
     kycStatus: 'Verified',
-    role: 'Manager',
+    role: 'Landowner',
     lastLogin: '2024-06-06T15:45:00Z',
     registrationDate: '2024-02-20T14:30:00Z',
     totalInvestmentEarnings: 89500,
@@ -60,7 +60,7 @@ const mockUsers: User[] = [
     email: 'michael.brown@example.com',
     userType: 'Compliance Officer',
     kycStatus: 'Verified',
-    role: 'Admin',
+    role: 'Compliance Officer',
     lastLogin: '2024-06-07T08:15:00Z',
     registrationDate: '2024-01-10T11:20:00Z',
     totalInvestmentEarnings: 0,
@@ -72,7 +72,7 @@ const mockUsers: User[] = [
     email: 'emily.davis@example.com',
     userType: 'Investor',
     kycStatus: 'Pending',
-    role: 'User',
+    role: 'Investor',
     lastLogin: '2024-06-05T12:20:00Z',
     registrationDate: '2024-03-01T16:45:00Z',
     totalInvestmentEarnings: 45000,
@@ -84,7 +84,7 @@ const mockUsers: User[] = [
     email: 'robert.wilson@example.com',
     userType: 'Landowner',
     kycStatus: 'Rejected',
-    role: 'User',
+    role: 'Landowner',
     lastLogin: '2024-05-30T09:30:00Z',
     registrationDate: '2024-02-14T10:15:00Z',
     totalInvestmentEarnings: 67800,
@@ -96,7 +96,7 @@ const mockUsers: User[] = [
     email: 'lisa.anderson@example.com',
     userType: 'Investor',
     kycStatus: 'Not Started',
-    role: 'User',
+    role: 'Investor',
     lastLogin: '2024-06-04T18:00:00Z',
     registrationDate: '2024-04-10T13:25:00Z',
     totalInvestmentEarnings: 23000,
@@ -414,10 +414,9 @@ const UserManagement: React.FC = () => {
                       className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                       disabled={!user.isActive}
                     >
-                      <option value="Admin">Admin</option>
-                      <option value="Manager">Manager</option>
-                      <option value="User">User</option>
-                      <option value="Viewer">Viewer</option>
+                      <option value="Compliance Officer">Compliance Officer</option>
+                      <option value="Investor">Investor</option>
+                      <option value="Landowner">Landowner</option>
                     </select>
                   </td>
                   <td className="py-3 px-4 text-gray-600 text-sm">

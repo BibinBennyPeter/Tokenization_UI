@@ -42,15 +42,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem, onItemCl
       {isOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />}      
        <div className={`
         fixed lg:sticky top-0 left-0
-        h-screen w-64 bg-gray-900 text-white
+        h-screen w-64 bg-white-900 text-black-900 border
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 z-50
+        lg:translate-x-0 z-50 flex-shrink-0
       `}>
 
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h1 className="text-xl font-bold">Admin Panel</h1>
-          <button onClick={onClose} className="lg:hidden p-1 hover:bg-gray-700 rounded">
+        <div className="flex items-center justify-between p-4 border-b border-green-700">
+          <h1 className="text-xl text-black font-bold">Admin Panel</h1>
+          <button onClick={onClose} className="lg:hidden p-1 hover:bg-red-700 rounded">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -59,8 +59,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem, onItemCl
             <button
               key={id}
               onClick={() => onItemClick(id)}
-              className={`w-full flex items-center px-4 py-3 text-left hover:bg-gray-700 transition-colors
-              ${activeItem === id ? 'bg-blue-600 border-r-4 border-blue-400' : ''}`}
+              className={`w-full flex items-center px-4 py-3 text-left hover:bg-green-100 hover:text-green-500 not-last:transition-colors
+              ${activeItem === id ? 'bg-green-600 border-r-4 border-blue-400' : ''}`}
             >
               <Icon className="w-5 h-5 mr-3" />
               <span className="text-sm font-medium">{label}</span>

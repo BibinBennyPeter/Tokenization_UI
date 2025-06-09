@@ -62,7 +62,7 @@ const AdminDashboard: React.FC = () => {
       />
       
       {/* Main content */}
-      <div className="flex-1 flex flex-col lg:ml-0 lg:pl-0">
+      <div className="flex-1 flex flex-col lg:ml-0">
         {/* Navbar */}
         <Navbar onMenuClick={handleSidebarToggle} user={mockUser} />
         
