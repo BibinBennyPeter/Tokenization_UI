@@ -36,40 +36,57 @@ const navItems: NavItem[] = [
   { id: 'transactions', label: 'Transaction Tracker', icon: CreditCard, path: '/transactions' }
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem, onItemClick }) => {
-  return (
-    <>
-      {isOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />}      
-       <div className={`
-        fixed lg:sticky top-0 left-0
-        h-screen w-64 bg-white-900 text-black-900 border
-        transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 z-50 flex-shrink-0
-      `}>
-
-        <div className="flex items-center justify-between p-4 border-b border-green-700">
-          <h1 className="text-xl text-black font-bold">Admin Panel</h1>
-          <button onClick={onClose} className="lg:hidden p-1 hover:bg-red-700 rounded">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <nav className="mt-4">
-          {navItems.map(({ id, icon: Icon, label }) => (
-            <button
-              key={id}
-              onClick={() => onItemClick(id)}
-              className={`w-full flex items-center px-4 py-3 text-left hover:bg-green-100 hover:text-green-500 not-last:transition-colors
-              ${activeItem === id ? 'bg-green-600 border-r-4 border-blue-400' : ''}`}
-            >
-              <Icon className="w-5 h-5 mr-3" />
-              <span className="text-sm font-medium">{label}</span>
-            </button>
-          ))}
-        </nav>
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, activeItem, onItemClick }) => (
+  <>
+    {/* Mobile overlay */}
+    {isOpen && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />
+    )}
+    {/* Mobile sidebar */}
+    <div className={`
+      fixed top-0 left-0 h-screen w-64 bg-white text-black border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:hidden
+    `}>
+      <div className="flex items-center justify-between p-4 border-b border-green-700">
+        <h1 className="text-xl text-black font-bold">Admin Panel</h1>
+        <button onClick={onClose} className="lg:hidden p-1 hover:bg-red-700 rounded">
+          <X className="w-5 h-5" />
+        </button>
       </div>
-    </>
-  );
-};
+      <nav className="mt-4">
+        {navItems.map(({ id, icon: Icon, label }) => (
+          <button
+            key={id}
+            onClick={() => onItemClick(id)}
+            className={`w-full flex items-center px-4 py-3 text-left hover:bg-green-100 hover:text-green-500 not-last:transition-colors
+            ${activeItem === id ? 'bg-green-600 border-r-4 border-blue-400' : ''}`}
+          >
+            <Icon className="w-5 h-5 mr-3" />
+            <span className="text-sm font-medium">{label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+    {/* Desktop sidebar */}
+    <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:bg-white lg:text-black lg:border-r lg:border-gray-200 lg:z-50 lg:flex lg:flex-col">
+      <div className="flex items-center justify-between p-4 border-b border-green-700">
+        <h1 className="text-xl text-black font-bold">Admin Panel</h1>
+      </div>
+      <nav className="mt-4">
+        {navItems.map(({ id, icon: Icon, label }) => (
+          <button
+            key={id}
+            onClick={() => onItemClick(id)}
+            className={`w-full flex items-center px-4 py-3 text-left hover:bg-green-100 hover:text-green-500 not-last:transition-colors
+            ${activeItem === id ? 'bg-green-600 border-r-4 border-blue-400' : ''}`}
+          >
+            <Icon className="w-5 h-5 mr-3" />
+            <span className="text-sm font-medium">{label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  </>
+);
 
 export default Sidebar;
