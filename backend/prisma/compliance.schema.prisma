@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  kyc          KYC[] // One-to-many
+  aml          AMLRecord[] // One-to-many
+  transactions Transaction[]
+  auditLogs   AuditLog[]  
+  riskScore     Int           @default(0)
+  isFrozen      Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model KYC {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  aadhaar   String
+  pan       String
+  bank      String
+  status    Status   @default(pending)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AMLRecord {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id])
+  transactionId String
+  amount        Float
+  frequency     Int
+  isSuspicious  Boolean  @default(false)
+  flaggedReason String?
+  createdAt     DateTime @default(now())
+}
+
+model Transaction {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  user          User              @relation(fields: [userId], references: [id])
+  tokenId       String
+  type          TransactionType
+  amount        Float
+  status        TransactionStatus
+  sourceOfFunds String?
+  createdAt     DateTime          @default(now())
+}
+
+  model AuditLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  action      String
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model RegulatoryDocument {
+  id          Int      @id @default(autoincrement())
+  title       String
+  fileName    String
+  fileType    String
+  version     String
+  uploadedAt  DateTime @default(now())
+}
+
+
+
+enum TransactionType {
+  BUY
+  SELL
+  TRANSFER
+}
+
+enum TransactionStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum Status {
+  pending
+  approved
+  rejected
+  flagged
+}
