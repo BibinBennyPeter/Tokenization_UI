@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  firebaseId   String   @unique
+  email        String   @unique
+  phone        String   @unique
+  fullName     String
+  dob          DateTime
+  gender       String?
+  nationality  String
+  occupation   String?
+  avgIncome    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  kycDocuments KycDocuments?
+  bankDetails  BankDetails?
+
+  @@map("users")
+}
+
+model KycDocuments {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  panNumber        String   @unique
+  panImageUrl      String?
+  aadhaarNumber    String?  @unique
+  aadhaarImageUrl  String?
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  state            String?
+  pincode          String?
+  addressProofUrl  String? // for Utility Bill, Rent Agreement, etc.
+  drivingLicenseNo String?   @unique
+  drivingLicenseUrl String?  @unique
+  passportNo       String?   @unique   
+  passportUrl      String?   @unique
+  voterIdNo        String?   @unique
+  voterIdUrl       String?   @unique
+  selfieUrl        String?   @unique
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("kyc_documents")
+}
+
+model BankDetails {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  accountHolderName  String
+  accountNumber      String   @unique
+  ifscCode           String
+  bankName           String?
+  bankProofUrl       String? // for bank statement or cancelled cheque
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bank_details")
+}
