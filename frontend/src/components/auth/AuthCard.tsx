@@ -1,88 +1,68 @@
 import React, { useState } from 'react';
-import { Mail, Phone, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { Mail, Phone, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import GoogleButton from './GoogleButton';
 import InputField from './InputField';
 
-interface AuthCardProps {
-  onSuccess?: () => void;
+export interface AuthCardProps {
+  isLogin: boolean;
+  authMethod: 'email' | 'phone';
+  isLoading: boolean;
+  formData: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    confirmPassword: string;
+  };
+  handleInputChange: (field: keyof AuthCardProps['formData'], value: string) => void;
+  setAuthMethod: (method: 'email' | 'phone') => void;
+  onToggleLogin: () => void;
+  onSubmit: () => void;
+  onGoogleClick: () => void;
 }
 
-const AuthCard: React.FC<AuthCardProps> = ({ onSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
+
+const AuthCard: React.FC<AuthCardProps> = ({
+  isLogin: initialIsLogin,
+  authMethod: initialAuthMethod,
+  isLoading,
+  formData,
+  handleInputChange,
+  setAuthMethod,
+  onToggleLogin,
+  onSubmit,
+  onGoogleClick,
+}) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    name: ''
-  });
+  const [isLogin, setIsLogin] = useState(initialIsLogin);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    
-    if (onSuccess) {
-      onSuccess();
-    }
+    onSubmit();
   };
-
-const login = useGoogleLogin({
-  flow: 'auth-code',
-  onSuccess: codeResponse => {
-    console.log(codeResponse);
-    setIsLoading(false);
-    if (onSuccess) onSuccess();
-  },
-  onError: errorResponse => {
-    console.error(errorResponse);
-    setIsLoading(false);
-    // Optionally: show error to user
-  },
-});
-
-const handleGoogleLogin = () => {
-  setIsLoading(true);
-  login();  // triggers the Google login flow
-};
-
 
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-white" />
-          </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {isLogin ? 'Welcome back' : 'Create your account'}
           </h2>
           <p className="text-gray-600">
-            {isLogin 
-              ? 'Sign in to your account to continue' 
-              : 'Join us today and get started in minutes'
-            }
+            {isLogin
+              ? 'Sign in to your account to continue'
+              : 'Join us today and get started in minutes'}
           </p>
         </div>
 
         {/* Google Login */}
-        <GoogleButton 
-          onClick={handleGoogleLogin}
+        <GoogleButton
+          onClick={onGoogleClick}
           isLoading={isLoading}
           text={isLogin ? 'Continue with Google' : 'Sign up with Google'}
         />
+
         {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
@@ -99,7 +79,7 @@ const handleGoogleLogin = () => {
             type="button"
             onClick={() => setAuthMethod('email')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-              authMethod === 'email'
+              initialAuthMethod === 'email'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
@@ -111,7 +91,7 @@ const handleGoogleLogin = () => {
             type="button"
             onClick={() => setAuthMethod('phone')}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${
-              authMethod === 'phone'
+              initialAuthMethod === 'phone'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
@@ -134,7 +114,7 @@ const handleGoogleLogin = () => {
             />
           )}
 
-          {authMethod === 'email' ? (
+          {initialAuthMethod === 'email' ? (
             <InputField
               label="Email Address"
               type="email"
@@ -223,7 +203,10 @@ const handleGoogleLogin = () => {
             {isLogin ? "Don't have an account?" : "Already have an account?"}
             <button
               type="button"
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                onToggleLogin();
+              }}
               className="ml-1 text-blue-600 hover:text-blue-800 font-medium"
             >
               {isLogin ? 'Sign up' : 'Sign in'}
@@ -236,8 +219,8 @@ const handleGoogleLogin = () => {
       {!isLogin && (
         <p className="text-center text-sm text-gray-500 mt-4">
           By creating an account, you agree to our{' '}
-          <a href="#" className="text-blue-600 hover:text-blue-800">Terms of Service</a>
-          {' '}and{' '}
+          <a href="#" className="text-blue-600 hover:text-blue-800">Terms of Service</a>{' '}
+          and{' '}
           <a href="#" className="text-blue-600 hover:text-blue-800">Privacy Policy</a>
         </p>
       )}
