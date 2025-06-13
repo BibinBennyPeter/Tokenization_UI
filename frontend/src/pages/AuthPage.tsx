@@ -64,6 +64,7 @@ const AuthPage = () => {
           : await createUserWithEmailAndPassword(auth, formData.email, formData.password);
 
         const idToken = await userCred.user.getIdToken();
+        console.log('ID Token:', idToken);
 
         // REFACTORED: Use the 'api' instance
         const res = await api.post(isLogin ? '/auth/login' : '/auth/signup', { idToken });

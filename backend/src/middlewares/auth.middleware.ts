@@ -32,8 +32,18 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
+    console.log('Decoded token:', decodedToken);
 
-    req.authData = decodedToken;
+    // req.authToken = decodedToken;
+    const { uid, email, phone_number } = decodedToken;
+
+    const { name} = req.body;
+    req.authData = {
+      uid,
+      name: name,
+      email: email || undefined, 
+      phone_number: phone_number || undefined,
+    };
 
     next();
   } catch (err) {

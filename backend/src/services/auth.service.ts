@@ -2,13 +2,22 @@
 import { prisma } from '../../prisma/prisma.service';
 import { CreateUserParams } from '../types/express';
 
-export async function createUserService({ uid, email, phone }: CreateUserParams) {
+export async function createUserService({ uid, name, email, phone }: CreateUserParams) {
+ 
+  const data: Record<string, any> = { uid };
+
+  if (name != null)   data.name = name;
+  if (email != null)  data.email = email;
+  if (phone != null || phone != undefined)  data.phone = phone;
+
+  console.log("Creating user with data:", data);
+  console.log("TYPE : ", typeof phone, data)
+
+  if (email == null && phone == null) {
+    throw new Error("At least email or phone must be provided");
+  } 
   const user = await prisma.user.create({
-    data: {
-      uid: uid,
-      email,
-      phone,
-    },
+    data,
     // data to return
     select: {
       id: true,

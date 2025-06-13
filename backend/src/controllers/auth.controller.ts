@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import {
   createUserService,
-  getUserByFirebaseUidService, // Import our new login service
+  getUserByFirebaseUidService,
 } from '../services/auth.service';
 import { CreateUserParams } from '../types/express';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
@@ -15,7 +15,7 @@ export class AuthController {
   async signupUser(req: Request, res: Response) {
     try {
       // Data is trusted because it comes from our authMiddleware
-      const { uid, email, phone_number } = req.authData!;
+      const { uid, name, email, phone_number } = req.authData!;
 
       // 1. Check if user already exists in our database
       const existingUser = await getUserByFirebaseUidService(uid);
@@ -26,6 +26,7 @@ export class AuthController {
       // 2. If not, create the new user
       const params: CreateUserParams = {
         uid,
+        name,
         email: email ?? undefined, // Use undefined for optional fields in Prisma
         phone: phone_number ?? undefined,
       };
@@ -39,7 +40,7 @@ export class AuthController {
         return res.status(409).json({ message: 'A user with this email or phone already exists.' });
       }
       console.error('Error creating user:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+      return res.status(500).json({ message: `Internal server error: ${error}` });
     }
   }
 

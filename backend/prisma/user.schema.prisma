@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  output = "../generated"
 }
 
 datasource db {
@@ -11,12 +11,12 @@ datasource db {
 model User {
   id           String   @id @default(uuid())
   uid          String   @unique
-  email        String   @unique
-  phone        String   @unique
-  fullName     String
-  dob          DateTime
+  email        String?
+  phone        String?
+  fullName     String?
+  dob          DateTime?
   gender       String?
-  nationality  String
+  nationality  String?
   occupation   String?
   avgIncome    Float?
   createdAt    DateTime @default(now())
@@ -31,7 +31,7 @@ model User {
 model KycDocuments {
   id               String   @id @default(uuid())
   userId           String   @unique
-  panNumber        String   @unique
+  panNumber        String?   @unique
   panImageUrl      String?
   aadhaarNumber    String?  @unique
   aadhaarImageUrl  String?
@@ -57,9 +57,9 @@ model KycDocuments {
 model BankDetails {
   id                 String   @id @default(uuid())
   userId             String   @unique
-  accountHolderName  String
-  accountNumber      String   @unique
-  ifscCode           String
+  accountHolderName  String?
+  accountNumber      String?  @unique
+  ifscCode           String?
   bankName           String?
   bankProofUrl       String? // for bank statement or cancelled cheque
 
