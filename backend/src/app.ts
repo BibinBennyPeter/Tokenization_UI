@@ -5,7 +5,7 @@ import authRouter from './routes/auth.router';
 
 const app = express();
 app.use(express.json());
-app.use('/auth', authRouter);
+app.use('/auth', authMiddleware, authRouter);
 app.use('/', authMiddleware, userRouter);
 
 export default app;

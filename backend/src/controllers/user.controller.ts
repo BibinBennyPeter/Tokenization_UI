@@ -1,16 +1,16 @@
 // src/controllers/user.controller.ts
 import { Request, Response } from 'express';
-import { syncUser } from '../services/user.service';
+import { updateProfile } from '../services/user.service';
 
 export class UserController {
   async updateBasicProfile(req: Request, res: Response) {
     try {
-      const uid = req.authData!.uid;
+      const id = req.params.id;
       const email = req.authData!.email!;
-      const phone = req.authData!.phone;
-      const { name, nationality, occupation, avgIncome, photograph } = req.body;
+      const phone = req.authData!.phone_number;
+      const { name, nationality, occupation, avgIncome, gender, dob } = req.body;
 
-      const user = await syncUser(uid, email, phone, { name, nationality, occupation, avgIncome, photograph });
+      const user = await updateProfile(id, email, phone, { name, nationality, occupation, avgIncome, gender, dob });
       res.json(user);
     } catch (error) {
       console.error(error);
