@@ -102,12 +102,11 @@ const AuthPage = () => {
       const userCred = await confirmationResult.confirm(code);
       const idToken = await userCred.user.getIdToken();
 
-      // REFACTORED: Use the 'api' instance for consistency.
       // This sends the idToken to the backend to finalize login/signup.
       const res = await api.post(isLogin ? '/auth/login' : '/auth/signup', { idToken });
       console.log(res);
 
-      if (res.status !== 200) throw new Error('Server authentication failed');
+      if (res.status !== 201) throw new Error('Server authentication failed');
       navigate('/dashboard');
     } catch (e: unknown) {
       console.error(e);
