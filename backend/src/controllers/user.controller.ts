@@ -5,7 +5,7 @@ import {
   getUserByFirebaseUidService,
 } from '../services/user.service';
 import { CreateUserParams } from '../types/express';
-import { updateProfile } from '../services/user.service';
+import { updateProfile,findUserById,upsertKyc,upsertBankDetails,getKycByUserId,updateSelfie,findUserWithDetails,patchUserProfile} from '../services/user.service';
 import {prisma} from '../../prisma/prisma.service'
 
 export class UserController {
@@ -57,253 +57,103 @@ export class UserController {
       return res.status(500).json({ message: `Internal server error: ${error}` });
     }
   }
-}
 
-export const submitKyc = async (req: Request, res: Response) => {
-  const userId = req.params.id;
-  const {
-    panNumber,
-    panImageUrl,
-    aadhaarNumber,
-    aadhaarImageUrl,
-    addressLine1,
-    addressLine2,
-    city,
-    state,
-    pincode,
-    addressProofUrl,
-    drivingLicenseNo,
-    drivingLicenseUrl,
-    passportNo,
-    passportUrl,
-    voterIdNo,
-    voterIdUrl,
-    selfieUrl,
-  } = req.body;
+  async submitKyc(req: Request, res: Response){
+    const userId = req.params.id;
 
-  try {
-    // Optional: check if user exists
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    try {
+      const user = await findUserById(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
 
-    const kyc = await prisma.kycDocuments.upsert({
-      where: { userId },
-      update: {
-        panNumber,
-        panImageUrl,
-        aadhaarNumber,
-        aadhaarImageUrl,
-        addressLine1,
-        addressLine2,
-        city,
-        state,
-        pincode,
-        addressProofUrl,
-        drivingLicenseNo,
-        drivingLicenseUrl,
-        passportNo,
-        passportUrl,
-        voterIdNo,
-        voterIdUrl,
-      },
-      create: {
-        userId,
-        panNumber,
-        panImageUrl,
-        aadhaarNumber,
-        aadhaarImageUrl,
-        addressLine1,
-        addressLine2,
-        city,
-        state,
-        pincode,
-        addressProofUrl,
-        drivingLicenseNo,
-        drivingLicenseUrl,
-        passportNo,
-        passportUrl,
-        voterIdNo,
-        voterIdUrl,
-      },
-    });
-
-    res.status(200).json({ message: "KYC submitted successfully", kyc });
-  } catch (error) {
-    console.error("KYC error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const submitBankDetails = async (req: Request, res: Response) => {
-  const userId = req.params.id;
-  const {
-    accountHolderName,
-    accountNumber,
-    ifscCode,
-    bankName,
-    bankProofUrl,
-  } = req.body;
-
-  try {
-    // Optional: check if user exists
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    const bankDetails = await prisma.bankDetails.upsert({
-      where: { userId },
-      update: {
-        accountHolderName,
-        accountNumber,
-        ifscCode,
-        bankName,
-        bankProofUrl,
-      },
-      create: {
-        userId,
-        accountHolderName,
-        accountNumber,
-        ifscCode,
-        bankName,
-        bankProofUrl,
-      },
-    });
-
-    res.status(200).json({
-      message: "Bank details submitted successfully",
-      bankDetails,
-    });
-  } catch (error) {
-    console.error("Bank details error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const uploadSelfie = async (req: Request, res: Response) => {
-  const userId = req.params.id;
-  const { selfieUrl } = req.body;
-
-  if (!selfieUrl) {
-    return res.status(400).json({ error: "selfieUrl is required" });
-  }
-
-  try {
-    const existing = await prisma.kycDocuments.findUnique({ where: { userId } });
-    if (!existing) {
-      return res.status(404).json({ error: "KYC record not found for this user" });
+      const kyc = await upsertKyc(userId, req.body);
+      res.status(200).json({ message: "KYC submitted successfully", kyc });
+    } catch (error) {
+      console.error("KYC error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
+  };
 
-    const updated = await prisma.kycDocuments.update({
-      where: { userId },
-      data: { selfieUrl },
-    });
+  async submitBankDetails(req: Request, res: Response){
+    const userId = req.params.id;
 
-    res.status(200).json({
-      message: "Selfie URL updated successfully",
-      data: updated,
-    });
-  } catch (error) {
-    console.error("Selfie upload error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
+    try {
+      const user = await findUserById(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
 
-export const getUserWithDetails = async (req: Request, res: Response) => {
-  const userId = req.params.id;
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        kycDocuments: true,
-        bankDetails: true,
-      },
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.status(200).json(user);
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-
-export const patchFullUserProfile = async (req: Request, res: Response) => {
-  const userId = req.params.id;
-  const { user, kyc, bank } = req.body;
-
-  try {
-    // 1. Check if user exists
-    const existingUser = await prisma.user.findUnique({ where: { id: userId } });
-    if (!existingUser) return res.status(404).json({ error: "User not found" });
-
-    // 2. Perform updates (only if data is provided)
-    const updates: any = {};
-
-    if (user) {
-      updates.user = await prisma.user.update({
-        where: { id: userId },
-        data: user,
+      const bankDetails = await upsertBankDetails(userId, req.body);
+      res.status(200).json({
+        message: "Bank details submitted successfully",
+        bankDetails,
       });
+    } catch (error) {
+      console.error("Bank details error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
+  async uploadSelfie(req: Request, res: Response){
+    const userId = req.params.id;
+    const { selfieUrl } = req.body;
+
+    if (!selfieUrl) {
+      return res.status(400).json({ error: "selfieUrl is required" });
     }
 
-    if (kyc) {
-      const existingKyc = await prisma.kycDocuments.findUnique({ where: { userId } });
-      if (existingKyc) {
-        updates.kyc = await prisma.kycDocuments.update({
-          where: { userId },
-          data: kyc,
-        });
-      } else {
-        updates.kyc = await prisma.kycDocuments.create({
-          data: { userId, ...kyc },
-        });
+    try {
+      const existing = await getKycByUserId(userId);
+      if (!existing) {
+        return res.status(404).json({ error: "KYC record not found for this user" });
       }
+
+      const updated = await updateSelfie(userId, selfieUrl);
+      res.status(200).json({ message: "Selfie uploaded", data: updated });
+    } catch (error) {
+      console.error("Selfie upload error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
+  };
 
-    if (bank) {
-      const existingBank = await prisma.bankDetails.findUnique({ where: { userId } });
-      if (existingBank) {
-        updates.bank = await prisma.bankDetails.update({
-          where: { userId },
-          data: bank,
-        });
-      } else {
-        updates.bank = await prisma.bankDetails.create({
-          data: { userId, ...bank },
-        });
-      }
+  async getUserWithDetails(req: Request, res: Response){
+    const userId = req.params.id;
+
+    try {
+      const user = await findUserWithDetails(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      res.status(200).json(user);
+    } catch (error) {
+      console.error("Fetch user error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
+  };
 
-    return res.status(200).json({
-      message: "Profile updated",
-      data: updates,
-    });
-  } catch (error) {
-    console.error("Patch error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
+  async patchFullUserProfile(req: Request, res: Response){
+    const userId = req.params.id;
+    const { user, kyc, bank } = req.body;
 
+    try {
+      const existingUser = await findUserById(userId);
+      if (!existingUser) return res.status(404).json({ error: "User not found" });
 
-export const getKycByUserId = async (req: Request, res: Response) => {
-  const userId = req.params.id;
-
-  try {
-    const kyc = await prisma.kycDocuments.findUnique({
-      where: { userId },
-    });
-
-    if (!kyc) {
-      return res.status(404).json({ error: "KYC record not found for this user" });
+      const data = await patchUserProfile(userId, user, kyc, bank);
+      res.status(200).json({ message: "Profile updated", data });
+    } catch (error) {
+      console.error("Patch error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
+  };
 
-    res.status(200).json(kyc);
-  } catch (error) {
-    console.error("Error fetching KYC:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
+  async getKyc(req: Request, res: Response){
+    const userId = req.params.id;
+
+    try {
+      const kyc = await getKycByUserId(userId);
+      if (!kyc) return res.status(404).json({ error: "KYC not found" });
+
+      res.status(200).json(kyc);
+    } catch (error) {
+      console.error("Fetch KYC error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+}

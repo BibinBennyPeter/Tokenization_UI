@@ -75,3 +75,73 @@ export async function updateUserEmailService(userId: string, newEmail: string) {
   });
   return updatedUser;
 }
+
+export async function findUserById(userId: string){
+  return await prisma.user.findUnique({ where: { id: userId } });
+};
+
+export async function upsertKyc(userId: string, data: any){
+  return await prisma.kycDocuments.upsert({
+    where: { userId },
+    update: data,
+    create: { userId, ...data },
+  });
+};
+
+export async function upsertBankDetails(userId: string, data: any){
+  return await prisma.bankDetails.upsert({
+    where: { userId },
+    update: data,
+    create: { userId, ...data },
+  });
+};
+
+export async function updateSelfie(userId: string, selfieUrl: string){
+  return await prisma.kycDocuments.update({
+    where: { userId },
+    data: { selfieUrl },
+  });
+};
+
+export async function getKycByUserId(userId: string){
+  return await prisma.kycDocuments.findUnique({ where: { userId } });
+};
+
+export async function findUserWithDetails(userId: string){
+  return await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      kycDocuments: true,
+      bankDetails: true,
+    },
+  });
+};
+
+export async function patchUserProfile(
+  userId: string,
+  user: any,
+  kyc: any,
+  bank: any
+){
+  const updates: any = {};
+
+  if (user) {
+    updates.user = await prisma.user.update({ where: { id: userId }, data: user });
+  }
+
+  if (kyc) {
+    const existingKyc = await prisma.kycDocuments.findUnique({ where: { userId } });
+    updates.kyc = existingKyc
+      ? await prisma.kycDocuments.update({ where: { userId }, data: kyc })
+      : await prisma.kycDocuments.create({ data: { userId, ...kyc } });
+  }
+
+  if (bank) {
+    const existingBank = await prisma.bankDetails.findUnique({ where: { userId } });
+    updates.bank = existingBank
+      ? await prisma.bankDetails.update({ where: { userId }, data: bank })
+      : await prisma.bankDetails.create({ data: { userId, ...bank } });
+  }
+
+  return updates;
+};
