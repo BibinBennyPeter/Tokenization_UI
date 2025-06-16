@@ -5,6 +5,7 @@ const router = Router();
 const userController = new UserController();
 
 router.post('/profile/:id', userController.updateBasicProfile.bind(userController));
+router.post('/register', userController.registerUser.bind(userController));
 router.post("/verify/:id", submitKyc);
 router.post("/account/:id", submitBankDetails);
 router.post("/image/:id", uploadSelfie);
