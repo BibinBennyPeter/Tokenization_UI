@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import {
   createUserService,
   getUserByFirebaseUidService,
-} from '../services/auth.service';
+} from '../services/user.service';
 import { CreateUserParams } from '../types/express';
 import { updateProfile } from '../services/user.service';
 import {prisma} from '../../prisma/prisma.service'
