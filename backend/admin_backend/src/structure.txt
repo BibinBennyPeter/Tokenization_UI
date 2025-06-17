@@ -1,0 +1,14 @@
+admin_backend/
+├── src/
+│   ├── config/db.ts
+│   ├── models/userModel.ts
+│   ├── services/userService.ts
+│   ├── controllers/userController.ts
+│   ├── routes/userRoutes.ts
+│   ├── middlewares/errorHandler.ts
+│   ├── app.ts
+│   └── index.ts
+├── .env
+├── tsconfig.json
+├── package.json
+└── node_modules/
