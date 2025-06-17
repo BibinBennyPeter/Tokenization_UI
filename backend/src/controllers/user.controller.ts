@@ -4,11 +4,95 @@ import {
   createUserService,
   getUserByFirebaseUidService,
 } from '../services/user.service';
+import * as admin from 'firebase-admin';
 import { CreateUserParams } from '../types/express';
-import { updateProfile,findUserById,upsertKyc,upsertBankDetails,getKycByUserId,updateSelfie,findUserWithDetails,patchUserProfile} from '../services/user.service';
-import {prisma} from '../../prisma/prisma.service'
+import { updateProfile,findUserById,upsertKyc,upsertBankDetails,getKycByUserId,updateSelfie,findUserWithDetails,patchUserProfile, checkUserExistsByEmailService} from '../services/user.service';
+
 
 export class UserController {
+
+  /**
+   * Checks if a user with the given email exists in Firebase Authentication.
+   * This is useful for UI flows to determine whether to show a login or sign-up form.
+   *
+   * @route POST /users/check-email
+   * @body { email: string }
+   */
+  async checkUserExistsByEmail(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required.' });
+      }
+
+      await admin.auth().getUserByEmail(email);
+
+      const userExists = await checkUserExistsByEmailService(email);
+
+      console.log('User exists:', userExists);
+
+      if (!userExists) return res.status(404).json({
+        message: 'User not found. Please proceed to create an account.',
+        exists: false,
+      });
+      else if (userExists.email === email){
+      return res.status(200).json({
+        message: 'User with this email already exists.',
+        exists: true,
+      });
+      }
+
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found') {
+        return res.status(404).json({
+          message: 'User not found. Please proceed to create an account.',
+          exists: false,
+        });
+      }
+      
+      console.error('Error checking if user exists by email:', error);
+      if (error.code === 'auth/invalid-email') {
+          return res.status(400).json({ message: 'The provided email is not valid.' });
+      }
+
+      return res.status(500).json({ message: 'Internal server error.' });
+    }
+  }
+  
+  async registerUser(req: Request, res: Response) {
+    try {
+      // Data is trusted because it comes from our authMiddleware
+      const { uid, email, phone_number } = req.authToken!;
+
+      // Check if user already exists in our database
+      const user = await getUserByFirebaseUidService(uid);
+      if (user) {
+        return res.status(200).json({
+          message: 'User logged in',})
+      }
+
+      // If not, create the new user
+      const { name } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: 'Name is required' });
+      }
+      const params: CreateUserParams = {
+        uid,
+        name,
+        email: email ?? undefined,
+        phone: phone_number ?? undefined,
+      };
+
+      const newUser = await createUserService(params);
+      return res.status(200).json(newUser); 
+    } catch (error) {
+      console.error('Error creating user:', error);
+      return res.status(500).json({ message: `Internal server error: ${error}` });
+    }
+  }
+
+
   async updateBasicProfile(req: Request, res: Response) {
     try {
       const id = req.params.id;
@@ -22,39 +106,6 @@ export class UserController {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Internal server error' });
-    }
-  }
-
-  async registerUser(req: Request, res: Response) {
-    try {
-      // Data is trusted because it comes from our authMiddleware
-      const { uid, email, phone_number } = req.authToken!;
-      console.log("AUTH DATA",req.authData)
-
-      // Check if user already exists in our database
-      const user = await getUserByFirebaseUidService(uid);
-      if (user) {
-        return res.status(200).json({
-          message: 'User logged in',})
-      }
-
-      // If not, create the new user
-      const { fullName } = req.body;
-      if (!fullName) {
-        return res.status(400).json({ message: 'Name is required' });
-      }
-      const params: CreateUserParams = {
-        uid,
-        name:fullName,
-        email: email ?? undefined,
-        phone: phone_number ?? undefined,
-      };
-
-      const newUser = await createUserService(params);
-      return res.status(200).json(newUser); 
-    } catch (error) {
-      console.error('Error creating user:', error);
-      return res.status(500).json({ message: `Internal server error: ${error}` });
     }
   }
 
@@ -113,14 +164,20 @@ export class UserController {
     }
   };
 
-  async getUserWithDetails(req: Request, res: Response){
-    const userId = req.params.id;
+  async getUser(req: Request, res: Response) {
+    const { uid } = req.authToken!;
+    console.log("Fetching user with UID:", uid);
 
+    const baseUser = await getUserByFirebaseUidService(uid);
+    console.log("Base user found:", baseUser);
+    if (!baseUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
     try {
-      const user = await findUserWithDetails(userId);
-      if (!user) return res.status(404).json({ error: "User not found" });
+      const detailedUser = await findUserWithDetails(baseUser.id);
+      if (!detailedUser) return res.status(404).json({ error: "User not found" });
 
-      res.status(200).json(user);
+      res.status(200).json(detailedUser);
     } catch (error) {
       console.error("Fetch user error:", error);
       res.status(500).json({ error: "Internal server error" });

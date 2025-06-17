@@ -2,7 +2,7 @@ import { prisma } from '../../prisma/prisma.service';
 import { CreateUserParams } from '../types/express';
 
 export async function createUserService({ uid, name, email, phone }: CreateUserParams) {
-  const data: any = { uid, fullName: name };
+  const data: any = { uid, name };
 
   if (email != null)  data.email = email;
   if (phone != null)  data.phone = phone;
@@ -25,6 +25,16 @@ export async function createUserService({ uid, name, email, phone }: CreateUserP
   return user;
 }
 
+export async function checkUserExistsByEmailService(email: string) {
+  const user = await prisma.user.findFirst({
+    where: {email:email},
+    select:{
+      id: true,
+      email:true
+    }
+  })
+  return user;
+}
 export async function getUserByFirebaseUidService(uid: string) {
   const user = await prisma.user.findUnique({
     where: {
