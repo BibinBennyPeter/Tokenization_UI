@@ -13,8 +13,8 @@ model User {
   uid          String   @unique
   email        String?
   phone        String?
-  fullName     String?
-  dob          DateTime?
+  name         String?
+  dob          DateTime?    @db.Date
   gender       String?
   nationality  String?
   occupation   String?
